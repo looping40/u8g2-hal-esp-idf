@@ -280,6 +280,17 @@ uint8_t u8g2_esp32_gpio_and_delay_cb(u8x8_t* u8x8,
       if (u8g2_esp32_hal.bus.spi.cs != U8G2_ESP32_HAL_UNDEFINED) {
         bitmask = bitmask | (1ull << u8g2_esp32_hal.bus.spi.cs);
       }
+      // Bus parallele 8080/6800 (utilise avec u8x8_byte_8bit_8080mode comme byte_cb)
+      const gpio_num_t parallel_pins[] = {
+        u8g2_esp32_hal.d0, u8g2_esp32_hal.d1, u8g2_esp32_hal.d2, u8g2_esp32_hal.d3,
+        u8g2_esp32_hal.d4, u8g2_esp32_hal.d5, u8g2_esp32_hal.d6, u8g2_esp32_hal.d7,
+        u8g2_esp32_hal.wr, u8g2_esp32_hal.rd,
+      };
+      for (size_t i = 0; i < sizeof(parallel_pins) / sizeof(parallel_pins[0]); i++) {
+        if (parallel_pins[i] != U8G2_ESP32_HAL_UNDEFINED) {
+          bitmask = bitmask | (1ull << parallel_pins[i]);
+        }
+      }
 
       if (bitmask == 0) {
         break;
@@ -291,6 +302,11 @@ uint8_t u8g2_esp32_gpio_and_delay_cb(u8x8_t* u8x8,
       gpioConfig.pull_down_en = GPIO_PULLDOWN_ENABLE;
       gpioConfig.intr_type = GPIO_INTR_DISABLE;
       gpio_config(&gpioConfig);
+
+      // RD reste HIGH en permanence : pas de lecture depuis l'ecran
+      if (u8g2_esp32_hal.rd != U8G2_ESP32_HAL_UNDEFINED) {
+        gpio_set_level(u8g2_esp32_hal.rd, 1);
+      }
       break;
     }
 
@@ -306,6 +322,15 @@ uint8_t u8g2_esp32_gpio_and_delay_cb(u8x8_t* u8x8,
         gpio_set_level(u8g2_esp32_hal.bus.spi.cs, arg_int);
       }
       break;
+      // Set the DC pin. Needed here (in addition to the inline handling in the
+      // SPI/I2C byte_cb above) because u8x8_byte_8bit_8080mode (used as byte_cb
+      // for the parallel bus) routes U8X8_MSG_BYTE_SET_DC through u8x8_gpio_SetDC,
+      // i.e. through this generic GPIO dispatch, not through a byte_cb-local case.
+    case U8X8_MSG_GPIO_DC:
+      if (u8g2_esp32_hal.dc != U8G2_ESP32_HAL_UNDEFINED) {
+        gpio_set_level(u8g2_esp32_hal.dc, arg_int);
+      }
+      break;
       // Set the Software I²C pin to the value passed in through arg_int.
     case U8X8_MSG_GPIO_I2C_CLOCK:
       if (u8g2_esp32_hal.bus.i2c.scl != U8G2_ESP32_HAL_UNDEFINED) {
@@ -319,6 +344,36 @@ uint8_t u8g2_esp32_gpio_and_delay_cb(u8x8_t* u8x8,
         gpio_set_level(u8g2_esp32_hal.bus.i2c.sda, arg_int);
         //				printf("%c",(arg_int==1?'D':'d'));
       }
+      break;
+
+      // Bus parallele 8080/6800 : broches de donnees D0-D7.
+    case U8X8_MSG_GPIO_D0:
+      if (u8g2_esp32_hal.d0 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d0, arg_int);
+      break;
+    case U8X8_MSG_GPIO_D1:
+      if (u8g2_esp32_hal.d1 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d1, arg_int);
+      break;
+    case U8X8_MSG_GPIO_D2:
+      if (u8g2_esp32_hal.d2 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d2, arg_int);
+      break;
+    case U8X8_MSG_GPIO_D3:
+      if (u8g2_esp32_hal.d3 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d3, arg_int);
+      break;
+    case U8X8_MSG_GPIO_D4:
+      if (u8g2_esp32_hal.d4 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d4, arg_int);
+      break;
+    case U8X8_MSG_GPIO_D5:
+      if (u8g2_esp32_hal.d5 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d5, arg_int);
+      break;
+    case U8X8_MSG_GPIO_D6:
+      if (u8g2_esp32_hal.d6 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d6, arg_int);
+      break;
+    case U8X8_MSG_GPIO_D7:
+      if (u8g2_esp32_hal.d7 != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.d7, arg_int);
+      break;
+      // Strobe d'ecriture ("E" dans la terminologie u8x8), pulse par u8x8_byte_8bit_8080mode.
+    case U8X8_MSG_GPIO_E:
+      if (u8g2_esp32_hal.wr != U8G2_ESP32_HAL_UNDEFINED) gpio_set_level(u8g2_esp32_hal.wr, arg_int);
       break;
 
       // Delay for the number of milliseconds passed in through arg_int.

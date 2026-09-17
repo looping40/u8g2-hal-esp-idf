@@ -11,6 +11,7 @@
 #define U8G2_ESP32_HAL_H_
 #include "u8g2.h"
 
+#include "esp_idf_version.h"
 #include "driver/gpio.h"
 
 #if ((defined CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2 && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 2, 0)))
@@ -25,7 +26,7 @@
 #define U8G2_ESP32_HAL_UNDEFINED GPIO_NUM_NC
 
 #if SOC_I2C_NUM > 1
-#define I2C_MASTER_NUM I2C_NUM_1     //  I2C port number for master dev
+#define I2C_MASTER_NUM I2C_NUM_0     //  I2C port number for master dev
 #else
 #define I2C_MASTER_NUM I2C_NUM_0     //  I2C port number for master dev
 #endif
@@ -62,18 +63,35 @@ typedef struct {
   gpio_num_t reset;
   /* GPIO num for DC. */
   gpio_num_t dc;
+  /* Parallel (8080/6800) bus settings. Pair with u8x8_byte_8bit_8080mode
+   * (from the u8g2 component itself) as byte_cb - this HAL only needs to
+   * answer the GPIO-level messages it sends. Chip-select reuses bus.spi.cs. */
+  gpio_num_t d0, d1, d2, d3, d4, d5, d6, d7;
+  /* GPIO num for the write strobe ("E" in u8x8 terminology). */
+  gpio_num_t wr;
+  /* GPIO num for read strobe - held HIGH permanently, never toggled (write-only use). */
+  gpio_num_t rd;
 } u8g2_esp32_hal_t;
 
 /**
  * Construct a default HAL configuration with all fields undefined.
  */
-#define U8G2_ESP32_HAL_DEFAULT                                        \
-  {                                                                   \
-    .bus = {.spi = {.clk = U8G2_ESP32_HAL_UNDEFINED,                  \
-                    .mosi = U8G2_ESP32_HAL_UNDEFINED,                 \
-                    .cs = U8G2_ESP32_HAL_UNDEFINED}},                 \
-    .reset = U8G2_ESP32_HAL_UNDEFINED, .dc = U8G2_ESP32_HAL_UNDEFINED \
+#define U8G2_ESP32_HAL_DEFAULT                                         \
+  {                                                                    \
+    .bus = {.spi = {.clk = U8G2_ESP32_HAL_UNDEFINED,                   \
+                    .mosi = U8G2_ESP32_HAL_UNDEFINED,                  \
+                    .cs = U8G2_ESP32_HAL_UNDEFINED}},                  \
+    .reset = U8G2_ESP32_HAL_UNDEFINED, .dc = U8G2_ESP32_HAL_UNDEFINED, \
+    .d0 = U8G2_ESP32_HAL_UNDEFINED, .d1 = U8G2_ESP32_HAL_UNDEFINED,    \
+    .d2 = U8G2_ESP32_HAL_UNDEFINED, .d3 = U8G2_ESP32_HAL_UNDEFINED,    \
+    .d4 = U8G2_ESP32_HAL_UNDEFINED, .d5 = U8G2_ESP32_HAL_UNDEFINED,    \
+    .d6 = U8G2_ESP32_HAL_UNDEFINED, .d7 = U8G2_ESP32_HAL_UNDEFINED,    \
+    .wr = U8G2_ESP32_HAL_UNDEFINED, .rd = U8G2_ESP32_HAL_UNDEFINED     \
   }
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
  * Initialize the HAL with the given configuration.
@@ -94,6 +112,11 @@ uint8_t u8g2_esp32_gpio_and_delay_cb(u8x8_t* u8x8,
                                      uint8_t msg,
                                      uint8_t arg_int,
                                      void* arg_ptr);
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif /* U8G2_ESP32_HAL_H_ */
 
 #endif
